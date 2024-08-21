@@ -158,9 +158,12 @@ const editDoneActivity = async (req, res) => {
 };
 const sleepBoardDetails = async (req, res) => {
   try {
-    let data_ =await doneActivity.find({ "key.userId": req.userId })
+    let data_ = await doneActivity.find({ "key.userId": req.userId });
+    if (data_.length == 0) {
+      res.status(200).json("no data");
+    }
     let labels = [];
-    let date = new Date(data_[0].date);
+    let date = new Date(data_[0]?.date);
     await labels.push(date.toDateString());
 
     while (true) {
@@ -176,33 +179,38 @@ const sleepBoardDetails = async (req, res) => {
         label: "Sleep Hours",
         data: [],
         borderColor: "#41416b",
-        backgroundColor: "#41416b",
+        pointBorderWidth: 0,
+        tension: 0.5,
       },
       {
         label: "Emotions",
         data: [],
         borderColor: "#2dbab3",
-        backgroundColor: "#2dbab3",
+        pointBorderWidth: 0,
+        tension: 0.5,
       },
       {
         label: "Activities Hours",
         data: [],
         borderColor: "#d4a465",
-        backgroundColor: "#d4a465",
+        tension: 0.5,
+        pointBorderWidth: 0,
       },
     ];
     labels.forEach((d) => {
-      let activitiesOfDay=data_.filter((a)=>a.date===d)
-      let activitiesHours=0
-      let activitiesOfDayLength=activitiesOfDay.length-2
-      let emotionSum=0
-      activitiesOfDay.forEach(a=>{
-        activitiesHours=activitiesHours+getHrs(a.startTime,a.endTime)
-        emotionSum=emotionSum+a.emotion
-      })
+      let activitiesOfDay = data_.filter((a) => a.date === d);
+      let activitiesHours = 0;
+      let activitiesOfDayLength = activitiesOfDay.length - 2;
+      let emotionSum = 0;
+      activitiesOfDay.forEach((a) => {
+        activitiesHours = activitiesHours + getHrs(a.startTime, a.endTime);
+        emotionSum = emotionSum + a.emotion;
+      });
 
-      datasets[1].data.push(emotionSum?(emotionSum/activitiesOfDayLength).toFixed(0):0)
-      datasets[2].data.push(activitiesHours)
+      datasets[1].data.push(
+        emotionSum ? (emotionSum / activitiesOfDayLength).toFixed(0) : 0
+      );
+      datasets[2].data.push(activitiesHours);
       let wakeup = data_.find(
         (v) => v.date === d && v.key.name === `w${req.userId}`
       );
@@ -220,7 +228,129 @@ const sleepBoardDetails = async (req, res) => {
         datasets[0].data.push(0);
       }
     });
+
+    let getAvg = (dataset_) => {
+      let sum = 0;
+      for (i = 0; i < dataset_.length; i++) {
+        sum = dataset_[i] + sum;
+      }
+      return (sum / dataset_.length).toFixed(0);
+    };
+    let sleepHAvg = getAvg(datasets[0].data);
+    let emotionAvg = 3;
+    let setAvgFor0Value = (dataset_, avg) => {
+      for (i = 0; i < dataset_.length; i++) {
+        if (dataset_[i] === 0) dataset_[i] = avg;
+      }
+    };
+    setAvgFor0Value(datasets[0].data, sleepHAvg);
+    setAvgFor0Value(datasets[1].data, emotionAvg);
     res.status(200).json({ labels, datasets });
+  } catch (error) {
+    res.status(400).json(getErrorMessage(error));
+  }
+};
+const sleepVsActivity = async (req, res) => {
+  try {
+    let data_ = await doneActivity.find({ "key.userId": req.userId });
+    if (data_.length == 0) {
+      res.status(200).json("no data");
+    }
+    let labels = [];
+    let date = new Date(data_[0]?.date);
+    await labels.push(date.toDateString());
+
+    while (true) {
+      if (date.toDateString() === req.body.date) {
+        break;
+      }
+      date.setDate(date.getDate() + 1);
+      labels.push(date.toDateString());
+    }
+
+    let datasets = [
+      {
+        label: "Activities Hours & Sleep Hours",
+        data: [],
+        borderColor: "#41416b",
+        pointBorderWidth: 0,
+        tension: 0.5,
+      },
+
+      {
+        label: "Activities Hours",
+        data: [],
+        borderColor: "#d4a465",
+        tension: 0.5,
+        pointBorderWidth: 0,
+      },
+    ];
+    labels.forEach((d) => {
+      let activitiesOfDay = data_.filter((a) => a.date === d);
+      let activitiesHours = 0;
+      activitiesOfDay.forEach((a) => {
+        activitiesHours = activitiesHours + getHrs(a.startTime, a.endTime);
+      });
+
+      datasets[1].data.push(activitiesHours);
+      let wakeup = data_.find(
+        (v) => v.date === d && v.key.name === `w${req.userId}`
+      );
+      let sleep = data_.find(
+        (v) => v.date === d && v.key.name === `s${req.userId}`
+      );
+      if (sleep) {
+        let numOfHours =
+          Number(wakeup.startTime.slice(0, 2)) +
+          Number(wakeup.startTime.slice(3) / 60) -
+          (Number(sleep.startTime.slice(0, 2)) +
+            Number(sleep.startTime.slice(3)) / 60);
+        datasets[0].data.push(numOfHours < 0 ? numOfHours + 24 : Number(numOfHours.toFixed(0)));
+      } else {
+        datasets[0].data.push(0);
+      }
+    });
+
+    let getAvg = (dataset_) => {
+      let sum = 0;
+      for (i = 0; i < dataset_.length; i++) {
+        sum =  sum+dataset_[i] ;
+      }
+      let avg_=(sum / dataset_.length).toFixed(0)
+      return avg_
+    };
+    let sleepHAvg = getAvg(datasets[0].data);
+    let setAvgFor0Value = (dataset_, avg) => {
+      for (i = 0; i < dataset_.length; i++) {
+        if (dataset_[i] === 0) dataset_[i] = avg;
+      }
+    };
+    
+    setAvgFor0Value(datasets[0].data, sleepHAvg);
+    let newLabel=[];
+    let newData=[];
+    for(let l=0;l<17;l++){
+      newLabel.push(l)
+      newData.push(0)
+      let count=0;
+      for(let i=0;i< datasets[0].data.length;i++){
+        if(datasets[0].data[i]==l)
+        {
+          newData[l]=newData[l]+Number(datasets[1].data[i])
+          count=count+1
+        }
+      }
+      if(count!=0) newData[l]=newData[l]/count
+    }
+    res.status(200).json({
+      labels: newLabel,
+      datasets: [{
+        label: "Activities Hours & Sleep Hours",
+        data: newData,
+        pointBorderWidth: 0,
+        tension: 0.5,
+      }],
+    });
   } catch (error) {
     res.status(400).json(getErrorMessage(error));
   }
@@ -235,33 +365,31 @@ const dailyProgressDetails = async (req, res) => {
     let numAcheivedGoals = goals.filter(
       (g) => g.achievedDate !== "Not yet."
     ).length;
-    let data=[0,0,0,0,0,0,0]
+    let data = [0, 0, 0, 0, 0, 0, 0];
     let totalHr = 0;
     let avgHr = 0;
     let numDays = 1;
-    let date = new Date(doneActivities[0].date);
-    while (date < new Date(doneActivities[doneActivities.length - 1].date)) {
+    let date = new Date(doneActivities[0]?.date);
+    while (date < new Date(doneActivities[doneActivities.length - 1]?.date)) {
       date.setDate(date.getDate() + 1);
       numDays = numDays + 1;
     }
     doneActivities.forEach((a) => {
-      let hr =getHrs(a.startTime, a.endTime)
+      let hr = getHrs(a.startTime, a.endTime);
       totalHr = totalHr + hr;
-      let d=new Date(a.date)
-      let i=d.getDay()+1===7?0:d.getDay()+1
-      data[i]=data[i]+hr
+      let d = new Date(a.date);
+      let i = d.getDay() + 1 === 7 ? 0 : d.getDay() + 1;
+      data[i] = data[i] + hr;
     });
     avgHr = totalHr / numDays;
-    res
-      .status(200)
-      .json({
-        totalHr: totalHr.toFixed(2),
-        avgHr: avgHr.toFixed(2),
-        numActivities,
-        numGoals,
-        achievedGoals: (numAcheivedGoals / numGoals).toFixed(2)*100,
-        data
-      });
+    res.status(200).json({
+      totalHr: totalHr.toFixed(2),
+      avgHr: avgHr.toFixed(2),
+      numActivities,
+      numGoals,
+      achievedGoals: (numAcheivedGoals / numGoals).toFixed(2) * 100,
+      data,
+    });
   } catch (error) {
     res.status(400).json(getErrorMessage(error));
   }
@@ -276,4 +404,5 @@ module.exports = {
   editDoneActivity,
   sleepBoardDetails,
   dailyProgressDetails,
+  sleepVsActivity,
 };

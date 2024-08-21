@@ -4,4 +4,4 @@ const app=require("./App")
 
 
 mongoose.connect(process.env.MONGODBURI).then(()=>console.log("Database connected"))
-app.listen(process.env.PORT||3001,()=>{console.log(`App run`)})
+app.listen(process.env.PORT||5000,()=>{console.log(`App run`)})

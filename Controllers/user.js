@@ -2,6 +2,7 @@ const { user, activity, doneActivity } = require("../imports/model");
 const getErrorMessage = require("../imports/error");
 const signUp = async (req, res) => {
   try {
+    req.body.email=req.body.email.toLowerCase() 
     const newUser = new user(req.body);
     let token = await newUser.createToken(req.body.rememberMe);
     let wakeUp = new activity({
@@ -39,7 +40,7 @@ const signUp = async (req, res) => {
 const emailIsUsedChk = async (req, res) => {
   res
     .status(200)
-    .json((await user.findOne({ email: req.body.email })) ? true : false);
+    .json((await user.findOne({ email: req.body.email.toLowerCase() })) ? true : false);
 };
 const getUserByToken = async (req, res) => {
   try {
@@ -88,7 +89,7 @@ const verifyPassword = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    let _user = await user.findOne({ email: req.body.email });
+    let _user = await user.findOne({ email: req.body.email.toLowerCase() });
     if (await _user.chkPassword(req.body.password)) {
       let wkupTime = await doneActivity.findOne({
         "key.name":`w${ _user._id}`,

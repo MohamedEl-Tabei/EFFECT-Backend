@@ -11,8 +11,8 @@ router.route("/deleteOneActivity").post(middleware.token,controller.doneActivity
 router.route("/editWKupTime").put(middleware.token,controller.doneActivity.EditWkupTime)
 router.route("/editDoneActivity").put(middleware.token,controller.doneActivity.editDoneActivity)
 router.route("/sleepBoardDetails").post(middleware.token,controller.doneActivity.sleepBoardDetails)
+router.route("/sleepVsActivity").post(middleware.token,controller.doneActivity.sleepVsActivity)
 router.route("/dailyProgressDetails").get(middleware.token,controller.doneActivity.dailyProgressDetails)
-
 
 
 
