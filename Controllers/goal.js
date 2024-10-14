@@ -95,6 +95,7 @@ const getGoalDetails = async (req, res) => {
     let userId = req.userId;
     let userDoneActivities = await doneActivity.find({ "key.userId": userId });
     let colorKeys=await activity.find({"key.userId":userId},"key colorKey")
+    let goal_=await  goal.findOne({"key.userId":userId,"key.name":goalName})
 
     let relatedDoneActivities = userDoneActivities.filter((activity) => {
       return activity.relatedGoals.includes(goalName);
@@ -131,7 +132,9 @@ const getGoalDetails = async (req, res) => {
       datasets[0].borderColor.push(ck.colorKey.color)
 
     })
-    res.status(200).json({numberOfHours,data:{
+    goal_.numberOfHours=goal_.numberOfHours<numberOfHours?numberOfHours:goal_.numberOfHours;
+    await goal_.save();
+    res.status(200).json({numberOfHours:goal_.numberOfHours,data:{
       labels,
       datasets,
     }});
