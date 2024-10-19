@@ -259,7 +259,6 @@ const sleepVsActivity = async (req, res) => {
     let labels = [];
     let date = new Date(data_[0]?.date);
     await labels.push(date.toDateString());
-
     while (true) {
       if (date.toDateString() === req.body.date) {
         break;
@@ -334,7 +333,7 @@ const sleepVsActivity = async (req, res) => {
       newData.push(0)
       let count=0;
       for(let i=0;i< datasets[0].data.length;i++){
-        if(datasets[0].data[i]==l)
+        if(Math.round(datasets[0].data[i])==l)//Math.round
         {
           newData[l]=newData[l]+Number(datasets[1].data[i])
           count=count+1
